@@ -22,13 +22,20 @@ We have implemented an optimized Retrieval-Augmented Generation (RAG) pipeline d
 
 ### 🧪 Testing the Pipeline
 
-**1. Run the Chunking Logic Tests**
+**1. Configure Environment Variables**
+Create a `.env.local` file in the root directory (`CourseLLM-Firebase`) and add your Google Gemini API key. This is required for the AI enrichment features.
+
+```env
+GOOGLE_API_KEY=YOUR_API_KEY_HERE
+```
+
+**2. Run the Chunking Logic Tests**
 Verify that the deterministic chunker correctly handles headers, nesting, and code blocks.
 ```bash
 npx tsx scripts/test-chunking.ts
 ```
 
-**2. Test the Full AI Pipeline (Genkit UI)**
+**3. Test the Full AI Pipeline (Genkit UI)**
 1.  Start the Genkit server:
     ```bash
     npm run genkit:dev
