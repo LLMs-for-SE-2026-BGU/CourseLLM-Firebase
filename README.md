@@ -36,3 +36,12 @@ npx tsx scripts/test-chunking.ts
 2.  Open `http://localhost:4000`.
 3.  Select `optimizedIndexingFlow`.
 4.  Input sample Markdown to see the generated chunks, metadata, and vector embeddings.
+
+    **Example Input JSON:**
+    ```json
+    {
+      "courseId": "cs-101",
+      "documentTitle": "Introduction to AI",
+      "markdownContent": "# What is AI?\n\nArtificial Intelligence (AI) is the simulation of human intelligence processes by machines.\n\n## Key Concepts\n\n### Machine Learning\nMachine Learning (ML) is a subset of AI that provides systems the ability to automatically learn and improve from experience."
+    }
+    ```
