@@ -34,8 +34,9 @@ npx tsx scripts/test-chunking.ts
     npm run genkit:dev
     ```
 2.  Open `http://localhost:4000`.
-3.  Select `optimizedIndexingFlow`.
-4.  Input sample Markdown to see the generated chunks, metadata, and vector embeddings.
+3.  Click on the **Flows** menu item.
+4.  Select `optimizedIndexingFlow`.
+5.  Input sample Markdown to see the generated chunks, metadata, and vector embeddings.
 
     **Example Input JSON:**
     ```json
