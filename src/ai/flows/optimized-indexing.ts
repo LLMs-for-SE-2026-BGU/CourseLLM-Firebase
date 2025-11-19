@@ -14,14 +14,35 @@ const EnrichedMetadataSchema = z.object({
 });
 
 /**
+ * Helper function to process items in batches to avoid hitting API rate limits.
+ */
+async function runInBatches<T, R>(
+  items: T[],
+  batchSize: number,
+  fn: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = [];
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    // Process the current batch in parallel
+    const batchResults = await Promise.all(
+      batch.map((item, index) => fn(item, i + index))
+    );
+    results.push(...batchResults);
+  }
+  return results;
+}
+
+/**
  * A Genkit Flow that implements the "Optimized Indexing Pipeline".
  * 
  * This flow takes a raw Markdown document and transforms it into a list of
  * "Enriched Chunks" ready for insertion into a Vector Database.
  * 
- * The pipeline consists of two main steps:
- * 1. **Deterministic Chunking:** Splits the document based on structure (headers) using `chunkMarkdown`.
- * 2. **Semantic Enrichment:** Uses an LLM (Gemini) to generate summaries, keywords, and questions for each chunk.
+ * The pipeline consists of three main steps:
+ * 1. **Deterministic Chunking:** Splits the document based on structure (headers).
+ * 2. **Semantic Enrichment:** Uses an LLM to generate metadata (Summary, Keywords, Questions).
+ * 3. **Embedding Generation:** Converts the enriched text into a vector for semantic search.
  */
 export const optimizedIndexingFlow = ai.defineFlow(
   {
@@ -36,6 +57,7 @@ export const optimizedIndexingFlow = ai.defineFlow(
       enrichedChunks: z.array(z.object({
         id: z.string(),
         content: z.string(),
+        embedding: z.array(z.number()).describe("The vector embedding of the chunk content."),
         metadata: z.object({
           headerPath: z.array(z.string()),
           summary: z.string(),
@@ -51,21 +73,15 @@ export const optimizedIndexingFlow = ai.defineFlow(
     // -----------------------------------------------------------------------
     // Step 1: Deterministic Chunking
     // -----------------------------------------------------------------------
-    // We use our custom utility to split the markdown while preserving header context.
-    // This ensures that even small chunks know they belong to "Chapter 1 > Section 2".
     const rawChunks = chunkMarkdown(input.markdownContent);
     console.log(`Generated ${rawChunks.length} raw chunks.`);
 
     // -----------------------------------------------------------------------
-    // Step 2: Parallel LLM Enrichment
+    // Step 2 & 3: Enrichment & Embedding (Batched)
     // -----------------------------------------------------------------------
-    // We iterate over each raw chunk and ask the LLM to analyze it.
-    // Promise.all allows us to process all chunks concurrently for speed.
-    // Note: In a high-volume production environment, consider using a concurrency limiter (like p-limit).
-    const enrichedChunksPromises = rawChunks.map(async (chunk, index) => {
+    // We process chunks in batches of 3 to respect API rate limits.
+    const enrichedChunks = await runInBatches(rawChunks, 3, async (chunk, index) => {
       
-      // Construct a prompt context that gives the LLM the full picture.
-      // We include the "Section Context" (header path) so the LLM understands where this text fits.
       const context = `
         Document Title: ${input.documentTitle}
         Section Context: ${chunk.metadata.headerPath.join(' > ')}
@@ -74,7 +90,7 @@ export const optimizedIndexingFlow = ai.defineFlow(
       `;
 
       try {
-        // Call the AI model to generate the metadata defined in EnrichedMetadataSchema.
+        // A. Generate Metadata (LLM)
         const { output } = await ai.generate({
           prompt: `
             You are an expert content indexer for a course platform.
@@ -87,23 +103,31 @@ export const optimizedIndexingFlow = ai.defineFlow(
 
         if (!output) throw new Error("No output from LLM");
 
-        // Return the fully enriched chunk object.
-        return {
-          id: `${input.courseId}-${index}`, // Unique ID for the chunk
-          content: chunk.content,
-          metadata: {
-            headerPath: chunk.metadata.headerPath,
-            ...output // Spread the AI-generated summary, keywords, and questions
-          }
-        };
-      } catch (error) {
-        console.error(`Failed to enrich chunk ${index}:`, error);
-        // Fallback Strategy: 
-        // If the LLM fails (e.g., rate limit, network error), we still return the chunk
-        // but with empty metadata so we don't lose the data entirely.
+        // B. Generate Embedding (Vector)
+        // We embed the content combined with the summary for better semantic density.
+        const textToEmbed = `Title: ${input.documentTitle}\nContext: ${chunk.metadata.headerPath.join(' > ')}\nSummary: ${output.summary}\nContent: ${chunk.content}`;
+        
+        const embeddingResult = await ai.embed({
+          embedder: 'googleai/text-embedding-004', 
+          content: textToEmbed
+        });
+
         return {
           id: `${input.courseId}-${index}`,
           content: chunk.content,
+          embedding: embeddingResult[0].embedding, // Extract the vector from the first result
+          metadata: {
+            headerPath: chunk.metadata.headerPath,
+            ...output
+          }
+        };
+      } catch (error) {
+        console.error(`Failed to process chunk ${index}:`, error);
+        // Fallback: Return chunk without enrichment/embedding if it fails
+        return {
+          id: `${input.courseId}-${index}`,
+          content: chunk.content,
+          embedding: [], // Empty embedding on failure
           metadata: {
             headerPath: chunk.metadata.headerPath,
             summary: "Processing failed",
@@ -114,10 +138,7 @@ export const optimizedIndexingFlow = ai.defineFlow(
       }
     });
 
-    // Wait for all chunks to be processed.
-    const enrichedChunks = await Promise.all(enrichedChunksPromises);
-
-    console.log(`Successfully enriched ${enrichedChunks.length} chunks.`);
+    console.log(`Successfully processed ${enrichedChunks.length} chunks.`);
 
     return {
       chunksCreated: enrichedChunks.length,
