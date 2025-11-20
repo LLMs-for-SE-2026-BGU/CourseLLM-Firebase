@@ -1,0 +1,80 @@
+// Prisma Schema for Memory Service
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @map("user_id") @db.VarChar(255)
+  name      String   @db.VarChar(255)
+  role      UserRole
+  userInfo  Json     @default("{}") @map("user_info") @db.JsonB
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp()
+
+  chats     Chat[]
+  memories  Memory[]
+
+  @@map("users")
+}
+
+model Chat {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @map("chat_id") @db.VarChar(255)
+  userId         String   @map("user_id") @db.VarChar(255)
+  title          String?  @db.VarChar(500)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamp()
+  lastUpdatedAt  DateTime @default(now()) @map("last_updated_at") @db.Timestamp()
+  messageCount   Int      @default(0) @map("message_count")
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages       Message[]
+
+  @@index([userId, lastUpdatedAt(sort: Desc)], name: "idx_chats_user_id")
+  @@map("chats")
+}
+
+model Message {
+  id             String      @id @default(dbgenerated("gen_random_uuid()")) @map("message_id") @db.VarChar(255)
+  chatId         String      @map("chat_id") @db.VarChar(255)
+  content        String      @db.Text
+  sender         MessageSender
+  metadata       Json        @default("{}") @db.JsonB
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamp()
+  sequenceNumber Int         @default(autoincrement()) @map("sequence_number")
+
+  chat           Chat        @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@index([chatId, sequenceNumber(sort: Desc)], name: "idx_messages_chat_id")
+  @@map("messages")
+}
+
+model Memory {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @map("memory_id") @db.VarChar(255)
+  userId        String   @map("user_id") @db.VarChar(255)
+  content       String   @db.Text
+  mem0MemoryId  String?  @map("mem0_memory_id") @db.VarChar(255)
+  sourceChatIds String[] @default([]) @map("source_chat_ids")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp()
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], name: "idx_memories_user_id")
+  @@map("memories")
+}
+
+enum UserRole {
+  student
+  teacher
+  admin
+}
+
+enum MessageSender {
+  user
+  assistant
+  system
+}
