@@ -27,14 +27,36 @@ A NestJS microservice that provides persistent conversational memory for the Cou
 
 ## Quick Start
 
-### 1. Install Dependencies
+### Option 1: Docker (Recommended)
+
+**Production:**
+```bash
+cd src/services/memory-service
+cp .env.example .env
+# Edit .env with your MEM0_API_KEY
+docker-compose up -d
+```
+
+**Development (with hot reload):**
+```bash
+cd src/services/memory-service
+cp .env.example .env
+# Edit .env with your MEM0_API_KEY
+docker-compose -f docker-compose.dev.yml up -d
+```
+
+📖 See [DOCKER.md](./DOCKER.md) for complete Docker documentation.
+
+### Option 2: Local Development
+
+**1. Install Dependencies**
 
 ```bash
 cd src/services/memory-service
 npm install
 ```
 
-### 2. Set Up Environment Variables
+**2. Set Up Environment Variables**
 
 ```bash
 cp .env.example .env
@@ -47,6 +69,7 @@ NODE_ENV=development
 PORT=3001
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/memory_service?schema=public"
 MEM0_API_KEY=your_mem0_api_key_here
+LOG_LEVEL=debug
 ```
 
 ### 3. Start PostgreSQL Database

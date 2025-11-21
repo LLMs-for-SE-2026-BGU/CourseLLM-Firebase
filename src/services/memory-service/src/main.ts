@@ -1,11 +1,19 @@
-import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { AppModule } from './app.module';
-import { AllExceptionsFilter } from './common/filters/http-exception.filter';
+import { NestFactory } from "@nestjs/core";
+import { ValidationPipe } from "@nestjs/common";
+import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
+import { AppModule } from "./app.module";
+import { AllExceptionsFilter } from "./common/filters/http-exception.filter";
+import { CustomLoggerService } from "./common/logger/logger.service";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
+  });
+
+  // Set up custom logger
+  const logger = app.get(CustomLoggerService);
+  logger.setContext("Bootstrap");
+  app.useLogger(logger);
 
   // Global exception filter
   app.useGlobalFilters(new AllExceptionsFilter());
@@ -21,23 +29,25 @@ async function bootstrap() {
 
   // Enable CORS
   app.enableCors();
+  logger.info("CORS enabled");
 
   // Swagger documentation
   const config = new DocumentBuilder()
-    .setTitle('Memory Service API')
-    .setDescription('Student Memory Service for CourseWise platform')
-    .setVersion('1.0')
-    .addTag('users', 'User registration and management')
-    .addTag('messages', 'Message persistence')
-    .addTag('conversations', 'Conversation retrieval')
-    .addTag('memories', 'Memory synthesis with mem0.ai')
+    .setTitle("Memory Service API")
+    .setDescription("Student Memory Service for CourseWise platform")
+    .setVersion("1.0")
+    .addTag("users", "User registration and management")
+    .addTag("messages", "Message persistence")
+    .addTag("conversations", "Conversation retrieval")
+    .addTag("memories", "Memory synthesis with mem0.ai")
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  SwaggerModule.setup("api/docs", app, document);
+  logger.info("Swagger documentation configured at /api/docs");
 
   const port = process.env.PORT || 3001;
   await app.listen(port);
-  console.log(`Memory Service running on http://localhost:${port}`);
-  console.log(`Swagger docs available at http://localhost:${port}/api/docs`);
+  logger.info(`Memory Service started successfully on port ${port}`);
+  logger.info(`Swagger docs available at http://localhost:${port}/api/docs`);
 }
 bootstrap();

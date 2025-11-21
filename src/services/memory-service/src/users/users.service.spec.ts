@@ -1,16 +1,24 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { UsersService } from './users.service';
-import { PrismaService } from '../database/prisma.service';
+import { Test, TestingModule } from "@nestjs/testing";
+import { UsersService } from "./users.service";
+import { PrismaService } from "../database/prisma.service";
+import { CustomLoggerService } from "../common/logger/logger.service";
 
-describe('UsersService', () => {
+describe("UsersService", () => {
   let service: UsersService;
-  let prismaService: PrismaService;
 
   const mockPrismaService = {
     user: {
       findUnique: jest.fn(),
       create: jest.fn(),
     },
+  };
+
+  const mockLoggerService = {
+    setContext: jest.fn(),
+    info: jest.fn(),
+    debug: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -21,30 +29,33 @@ describe('UsersService', () => {
           provide: PrismaService,
           useValue: mockPrismaService,
         },
+        {
+          provide: CustomLoggerService,
+          useValue: mockLoggerService,
+        },
       ],
     }).compile();
 
     service = module.get<UsersService>(UsersService);
-    prismaService = module.get<PrismaService>(PrismaService);
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(service).toBeDefined();
   });
 
-  describe('registerUser', () => {
+  describe("registerUser", () => {
     const registerDto = {
-      userID: 'user_123',
-      name: 'Test User',
-      role: 'student' as any,
-      userInfo: { grade: '10' },
+      userID: "user_123",
+      name: "Test User",
+      role: "student" as any,
+      userInfo: { grade: "10" },
     };
 
-    it('should register a new user', async () => {
+    it("should register a new user", async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
       mockPrismaService.user.create.mockResolvedValue({
         id: registerDto.userID,
@@ -63,7 +74,7 @@ describe('UsersService', () => {
       expect(mockPrismaService.user.create).toHaveBeenCalled();
     });
 
-    it('should return success if user already exists (idempotent)', async () => {
+    it("should return success if user already exists (idempotent)", async () => {
       mockPrismaService.user.findUnique.mockResolvedValue({
         id: registerDto.userID,
         name: registerDto.name,
@@ -74,19 +85,19 @@ describe('UsersService', () => {
       const result = await service.registerUser(registerDto);
 
       expect(result.success).toBe(true);
-      expect(result.message).toContain('already registered');
+      expect(result.message).toContain("already registered");
       expect(mockPrismaService.user.create).not.toHaveBeenCalled();
     });
 
-    it('should return error if database operation fails', async () => {
+    it("should return error if database operation fails", async () => {
       mockPrismaService.user.findUnique.mockRejectedValue(
-        new Error('Database error'),
+        new Error("Database error"),
       );
 
       const result = await service.registerUser(registerDto);
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain('Failed to register user');
+      expect(result.message).toContain("Failed to register user");
     });
   });
 });

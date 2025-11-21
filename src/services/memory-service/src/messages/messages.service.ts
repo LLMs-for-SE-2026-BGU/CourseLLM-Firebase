@@ -1,60 +1,86 @@
 import {
   Injectable,
-  Logger,
   NotFoundException,
   BadRequestException,
-} from '@nestjs/common';
-import { PrismaService } from '../database/prisma.service';
-import { SaveMessageDto } from './dto/save-message.dto';
+} from "@nestjs/common";
+import { PrismaService } from "../database/prisma.service";
+import { SaveMessageDto } from "./dto/save-message.dto";
+import { CustomLoggerService } from "../common/logger/logger.service";
 
 @Injectable()
 export class MessagesService {
-  private readonly logger = new Logger(MessagesService.name);
-
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly logger: CustomLoggerService,
+  ) {
+    this.logger.setContext("MessagesService");
+  }
 
   async saveMessage(dto: SaveMessageDto) {
+    this.logger.info(
+      `Saving message from ${dto.sender} to chat ${dto.chatID || "new conversation"}`,
+    );
+
     try {
       let chatId = dto.chatID;
 
       // If no chatID provided, create new conversation
       if (!chatId) {
         if (!dto.userID) {
+          this.logger.warn(
+            "Attempted to create new conversation without userID",
+          );
           throw new BadRequestException(
-            'userID is required when creating a new conversation',
+            "userID is required when creating a new conversation",
           );
         }
 
         // Verify user exists
+        this.logger.debug(`Verifying user ${dto.userID} exists`);
         const user = await this.prisma.user.findUnique({
           where: { id: dto.userID },
         });
 
         if (!user) {
+          this.logger.warn(`User ${dto.userID} not found`);
           throw new NotFoundException(`User ${dto.userID} not found`);
         }
 
         // Create new chat with auto-generated title
+        const title = this.generateTitleFromContent(dto.content);
+        this.logger.debug(
+          `Creating new chat for user ${dto.userID} with title: "${title}"`,
+        );
         const newChat = await this.prisma.chat.create({
           data: {
             userId: dto.userID,
-            title: this.generateTitleFromContent(dto.content),
+            title,
           },
         });
         chatId = newChat.id;
-        this.logger.log(`Created new chat ${chatId} for user ${dto.userID}`);
+        this.logger.info(
+          `Created new chat ${chatId} for user ${dto.userID} with title: "${title}"`,
+        );
       } else {
         // Verify chat exists
+        this.logger.debug(`Verifying chat ${chatId} exists`);
         const chat = await this.prisma.chat.findUnique({
           where: { id: chatId },
         });
 
         if (!chat) {
+          this.logger.warn(`Chat ${chatId} not found`);
           throw new NotFoundException(`Chat ${chatId} not found`);
         }
+        this.logger.debug(
+          `Chat ${chatId} verified, belongs to user ${chat.userId}`,
+        );
       }
 
       // Save message
+      this.logger.debug(
+        `Saving ${dto.sender} message to chat ${chatId} (content length: ${dto.content.length})`,
+      );
       const message = await this.prisma.message.create({
         data: {
           chatId,
@@ -65,6 +91,7 @@ export class MessagesService {
       });
 
       // Update chat's last_updated_at and message_count
+      this.logger.debug(`Updating chat ${chatId} metadata`);
       await this.prisma.chat.update({
         where: { id: chatId },
         data: {
@@ -73,7 +100,9 @@ export class MessagesService {
         },
       });
 
-      this.logger.log(`Message ${message.id} saved to chat ${chatId}`);
+      this.logger.info(
+        `Successfully saved message ${message.id} to chat ${chatId} (seq: ${message.sequenceNumber})`,
+      );
 
       return {
         success: true,
@@ -88,7 +117,10 @@ export class MessagesService {
       ) {
         throw error;
       }
-      this.logger.error(`Error saving message: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to save message: ${error.message}`,
+        error.stack,
+      );
       throw new Error(`Failed to save message: ${error.message}`);
     }
   }
@@ -99,6 +131,6 @@ export class MessagesService {
     if (content.length <= maxLength) {
       return content;
     }
-    return content.substring(0, maxLength).trim() + '...';
+    return content.substring(0, maxLength).trim() + "...";
   }
 }
