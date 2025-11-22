@@ -1,4 +1,4 @@
-import type { Course, Student, StudentProgress, EngagementData } from './types';
+import type { Course, Student, StudentProgress, EngagementData, Quiz, LearningObjective } from './types';
 
 export const students: Student[] = [
   { id: 'student-1', name: 'Alex Johnson', avatarUrl: 'https://i.pravatar.cc/150?u=student-1' },
@@ -66,3 +66,17 @@ export const engagementData: EngagementData[] = [
 ];
 
 export const getCourseById = (id: string) => courses.find(c => c.id === id);
+
+export const quizzes: Quiz[] = [
+  { id: 'quiz-1', title: 'Python Basics', courseId: 'cs101', score: 8, totalQuestions: 10, dateTaken: '2024-05-10', status: 'completed' },
+  { id: 'quiz-2', title: 'Control Flow', courseId: 'cs101', score: 0, totalQuestions: 15, dateTaken: '', status: 'pending' },
+  { id: 'quiz-3', title: 'Data Structures Intro', courseId: 'cs202', score: 9, totalQuestions: 10, dateTaken: '2024-05-15', status: 'completed' },
+];
+
+export const learningObjectives: LearningObjective[] = [
+  { id: 'lo-1', description: 'Understand basic Python syntax', courseId: 'cs101', status: 'mastered', progress: 100 },
+  { id: 'lo-2', description: 'Use variables and data types', courseId: 'cs101', status: 'mastered', progress: 90 },
+  { id: 'lo-3', description: 'Implement control flow structures', courseId: 'cs101', status: 'in-progress', progress: 60 },
+  { id: 'lo-4', description: 'Implement various data structures', courseId: 'cs202', status: 'in-progress', progress: 40 },
+  { id: 'lo-5', description: 'Analyze algorithm complexity', courseId: 'cs202', status: 'not-started', progress: 0 },
+];

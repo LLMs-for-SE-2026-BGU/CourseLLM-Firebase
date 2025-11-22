@@ -3,10 +3,12 @@ import {
   GraduationCap,
   LayoutDashboard,
   BookOpen,
+  User,
 } from 'lucide-react';
 
 const studentNavItems = [
   { href: '/student', label: 'Dashboard', icon: <LayoutDashboard /> },
+  { href: '/student/profile', label: 'Profile', icon: <User /> },
   { href: '/student/courses', label: 'My Courses', icon: <BookOpen /> },
   { href: '/student/assessments', label: 'Assessments', icon: <GraduationCap /> },
 ];
