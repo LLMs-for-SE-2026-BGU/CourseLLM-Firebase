@@ -1,3 +1,8 @@
+# Prevent people from commiting their agent's .md files
+*.md
+!doc/*.md
+!README.md
+
 # Dependencies
 node_modules/
 package-lock.json
