@@ -1,0 +1,84 @@
+name: Memory Service Tests (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Type of tests to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - unit
+          - e2e
+          - lint
+
+defaults:
+  run:
+    working-directory: src/services/memory-service
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: memory_service_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/memory_service_test?schema=public
+      MEM0_API_KEY: test_key_for_ci
+      NODE_ENV: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: src/services/memory-service/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run Linting
+        if: inputs.test_type == 'lint' || inputs.test_type == 'all'
+        run: npm run lint
+
+      - name: Run Unit Tests
+        if: inputs.test_type == 'unit' || inputs.test_type == 'all'
+        run: npm test -- --coverage
+
+      - name: Setup Database for E2E
+        if: inputs.test_type == 'e2e' || inputs.test_type == 'all'
+        run: npx prisma migrate deploy
+
+      - name: Run E2E Tests
+        if: inputs.test_type == 'e2e' || inputs.test_type == 'all'
+        run: npm run test:e2e
+
+      - name: Test Summary
+        if: always()
+        run: |
+          echo "## Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "Test Type: ${{ inputs.test_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "Status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
