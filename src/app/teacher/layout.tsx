@@ -3,11 +3,13 @@ import {
   BarChart2,
   LayoutDashboard,
   BookOpen,
+  ClipboardList,
 } from 'lucide-react';
 
 const teacherNavItems = [
   { href: '/teacher', label: 'Dashboard', icon: <LayoutDashboard /> },
   { href: '/teacher/courses', label: 'Courses', icon: <BookOpen /> },
+  { href: '/teacher/quizzes', label: 'Quizzes', icon: <ClipboardList /> },
 ];
 
 const user = {

@@ -73,111 +73,79 @@ export async function generateQuiz(input: GenerateQuizInput): Promise<GenerateQu
 }
 
 /**
- * Tool to extract key topics from course content
+ * Function to extract key topics from course content (simplified)
  */
-const extractKeyTopics = ai.defineTool(
-  {
-    name: 'extractKeyTopics',
-    description: 'Extracts the main topics and concepts from course content to focus quiz questions on.',
-    inputSchema: z.object({
-      courseContent: z.string().describe('The course material to analyze'),
-      learningObjectives: z.string().describe('Learning objectives to consider'),
-    }),
-    outputSchema: z
-      .array(z.string())
-      .describe('Array of key topics identified in the course content'),
-  },
-  async input => {
-    // For MVP, we'll use a simple AI call to extract topics
-    // In production, this could be enhanced with NLP or more sophisticated analysis
-    const topicPrompt = ai.definePrompt({
-      name: 'extractTopicsPrompt',
-      input: {
-        schema: z.object({
-          courseContent: z.string(),
-          learningObjectives: z.string(),
-        }),
-      },
-      output: {
-        schema: z.object({
-          topics: z.array(z.string()),
-        }),
-      },
-      prompt: `Analyze the following course content and learning objectives, then extract 3-7 key topics that should be covered in assessment questions.
-
-Course Content:
-{{courseContent}}
-
-Learning Objectives:
-{{learningObjectives}}
-
-Extract the main topics as a focused list.`,
-    });
-
-    const {output} = await topicPrompt(input);
-    return output!.topics;
+async function extractKeyTopics(input: {
+  courseContent: string;
+  learningObjectives: string;
+}): Promise<string[]> {
+  // For MVP, extract topics from learning objectives and simple keyword analysis
+  const topics: string[] = [];
+  
+  // Extract from learning objectives
+  const objectiveLines = input.learningObjectives.split(/[.\n]/).filter(line => line.trim().length > 0);
+  objectiveLines.forEach(line => {
+    // Extract meaningful phrases (simplified)
+    const words = line.trim().split(/\s+/);
+    if (words.length >= 2 && words.length <= 5) {
+      topics.push(line.trim());
+    }
+  });
+  
+  // If we don't have enough topics, add some generic ones
+  if (topics.length < 3) {
+    topics.push('Core Concepts', 'Key Principles', 'Practical Application');
   }
-);
+  
+  // Return first 5 topics
+  return topics.slice(0, 5);
+}
 
 /**
- * Tool to validate question quality
+ * Function to validate question quality (not an AI tool)
  */
-const validateQuestionQuality = ai.defineTool(
-  {
-    name: 'validateQuestionQuality',
-    description: 'Validates that a generated question is high-quality, based on course content, and not misleading.',
-    inputSchema: z.object({
-      question: QuizQuestionSchema,
-      courseContent: z.string(),
-    }),
-    outputSchema: z.object({
-      isValid: z.boolean().describe('Whether the question passes quality checks'),
-      reason: z.string().describe('Explanation of validation result'),
-    }),
-  },
-  async input => {
-    // Basic validation checks
-    const question = input.question;
-
-    // Check question length
-    if (question.questionText.length < 10) {
-      return {
-        isValid: false,
-        reason: 'Question text is too short',
-      };
-    }
-
-    // Check for multiple-choice options
-    if (question.questionType === 'multiple-choice' && (!question.options || question.options.length < 2)) {
-      return {
-        isValid: false,
-        reason: 'Multiple-choice questions must have at least 2 options',
-      };
-    }
-
-    // Check for explanation
-    if (!question.explanation || question.explanation.length < 20) {
-      return {
-        isValid: false,
-        reason: 'Question must have a meaningful explanation',
-      };
-    }
-
-    // Check for correct answer
-    if (!question.correctAnswer || (typeof question.correctAnswer === 'string' && question.correctAnswer.length === 0)) {
-      return {
-        isValid: false,
-        reason: 'Question must have a correct answer specified',
-      };
-    }
-
-    // All checks passed
+function validateQuestionQuality(question: z.infer<typeof QuizQuestionSchema>): {
+  isValid: boolean;
+  reason: string;
+} {
+  // Check question length
+  if (question.questionText.length < 10) {
     return {
-      isValid: true,
-      reason: 'Question meets all quality criteria',
+      isValid: false,
+      reason: 'Question text is too short',
     };
   }
-);
+
+  // Check for multiple-choice options
+  if (question.questionType === 'multiple-choice' && (!question.options || question.options.length < 2)) {
+    return {
+      isValid: false,
+      reason: 'Multiple-choice questions must have at least 2 options',
+    };
+  }
+
+  // Check for explanation
+  if (!question.explanation || question.explanation.length < 20) {
+    return {
+      isValid: false,
+      reason: 'Question must have a meaningful explanation',
+    };
+  }
+
+  // Check for correct answer
+  if (!question.correctAnswer || (typeof question.correctAnswer === 'string' && question.correctAnswer.length === 0)) {
+    return {
+      isValid: false,
+      reason: 'Question must have a correct answer specified',
+    };
+  }
+
+  // All checks passed
+  return {
+    isValid: true,
+    reason: 'Question meets all quality criteria',
+  };
+}
 
 /**
  * Main quiz generation prompt
@@ -186,7 +154,6 @@ const quizPrompt = ai.definePrompt({
   name: 'quizGenerationPrompt',
   input: {schema: GenerateQuizInputSchema},
   output: {schema: GenerateQuizOutputSchema},
-  tools: [extractKeyTopics, validateQuestionQuality],
   prompt: `You are an expert educational assessment creator specializing in generating high-quality quiz questions from course materials.
 
 Your task is to generate {{numberOfQuestions}} quiz questions at {{difficulty}} difficulty level based on the provided course content and learning objectives.
@@ -299,21 +266,16 @@ const quizGenerationFlow = ai.defineFlow(
 
       // Step 3: Validate each question
       console.log('[Quiz Generation] Validating question quality...');
-      const validatedQuestions = await Promise.all(
-        output.questions.map(async (question, index) => {
-          const validation = await validateQuestionQuality({
-            question,
-            courseContent: input.courseContent,
-          });
+      const validatedQuestions = output.questions.map((question, index) => {
+        const validation = validateQuestionQuality(question);
 
-          if (!validation.isValid) {
-            console.warn(`[Quiz Generation] Question ${index + 1} failed validation: ${validation.reason}`);
-            return null;
-          }
+        if (!validation.isValid) {
+          console.warn(`[Quiz Generation] Question ${index + 1} failed validation: ${validation.reason}`);
+          return null;
+        }
 
-          return question;
-        })
-      );
+        return question;
+      });
 
       // Filter out invalid questions
       const validQuestions = validatedQuestions.filter((q): q is NonNullable<typeof q> => q !== null);
