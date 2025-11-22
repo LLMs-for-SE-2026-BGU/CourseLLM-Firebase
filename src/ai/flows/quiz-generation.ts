@@ -124,8 +124,8 @@ function validateQuestionQuality(question: z.infer<typeof QuizQuestionSchema>): 
     };
   }
 
-  // Check for explanation
-  if (!question.explanation || question.explanation.length < 20) {
+  // Check for explanation (relaxed to 10 characters)
+  if (!question.explanation || question.explanation.length < 10) {
     return {
       isValid: false,
       reason: 'Question must have a meaningful explanation',

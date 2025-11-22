@@ -84,8 +84,8 @@ export default function GenerateQuizPage() {
         .filter((t) => t.length > 0);
 
       // Request extra questions to account for validation filtering
-      // Request 20% more than needed to ensure we get the desired number
-      const requestedQuestions = Math.ceil(numberOfQuestions * 1.2);
+      // Request 80% more than needed to ensure we get the desired number after filtering
+      const requestedQuestions = Math.ceil(numberOfQuestions * 1.8);
       
       // Call AI flow to generate quiz
       const result = await generateQuiz({
@@ -96,16 +96,30 @@ export default function GenerateQuizPage() {
         topics: topicList.length > 0 ? topicList : undefined,
       });
       
-      // Trim to requested number if we got more
+      // If we got fewer questions than requested, warn the user
+      if (result.questions.length < numberOfQuestions) {
+        console.warn(`Only generated ${result.questions.length} of ${numberOfQuestions} requested questions`);
+      }
+      
+      // Trim to requested number if we got more, otherwise use what we have
       const trimmedQuestions = result.questions.slice(0, numberOfQuestions);
 
       setGeneratedQuestions(trimmedQuestions);
       setShowPreview(true);
 
-      toast({
-        title: 'Quiz Generated!',
-        description: `Successfully generated ${trimmedQuestions.length} questions.`,
-      });
+      // Show appropriate toast message
+      if (trimmedQuestions.length < numberOfQuestions) {
+        toast({
+          title: 'Quiz Generated (Partial)',
+          description: `Generated ${trimmedQuestions.length} of ${numberOfQuestions} requested questions. Some questions were filtered out due to quality issues. You can regenerate or save these questions.`,
+          variant: 'default',
+        });
+      } else {
+        toast({
+          title: 'Quiz Generated!',
+          description: `Successfully generated ${trimmedQuestions.length} questions.`,
+        });
+      }
     } catch (error) {
       console.error('Quiz generation error:', error);
       toast({
