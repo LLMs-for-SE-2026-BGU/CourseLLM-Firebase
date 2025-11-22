@@ -13,10 +13,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { initialFiles, type FileData } from "@/lib/files";
+import { initialFiles as defaultInitialFiles, type FileData } from "@/lib/files";
 import { FileCard } from "./file-card";
 
-export function FileBrowser() {
+export function FileBrowser({ initialFiles = defaultInitialFiles }: { initialFiles?: FileData[] }) {
   const [files, setFiles] = useState<FileData[]>(initialFiles);
   const [fileToDelete, setFileToDelete] = useState<FileData | null>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
@@ -86,6 +86,7 @@ export function FileBrowser() {
           ref={uploadInputRef}
           onChange={handleFileChange}
           className="hidden"
+          aria-label="Upload File"
         />
       </div>
 

@@ -1,7 +1,16 @@
-import type {NextConfig} from 'next';
+const securityHeaders = require('./headers.js');
 
-const nextConfig: NextConfig = {
-  /* config options here */
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  async headers() {
+    return [
+      {
+        // Apply these headers to all routes in your application.
+        source: '/:path*',
+        headers: securityHeaders,
+      },
+    ];
+  },
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -32,4 +41,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+module.exports = nextConfig;
