@@ -26,11 +26,11 @@ echo "Database is ready!"
 
 # Generate Prisma Client (in case it's not already generated)
 echo "Generating Prisma Client..."
-npx prisma generate
+npx prisma@6 generate
 
 # Initialize database (only creates tables if empty)
 echo "Initializing database schema..."
-npm run db:init || npx prisma migrate deploy
+npm run db:init || npx prisma@6 migrate deploy
 
 echo "Starting application..."
 # Execute the main command

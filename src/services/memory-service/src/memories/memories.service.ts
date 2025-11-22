@@ -1,12 +1,17 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
-import { PrismaService } from "../database/prisma.service";
+import { Injectable, NotFoundException, Inject } from "@nestjs/common";
 import { Mem0Service } from "./mem0.service";
 import { SynthesizeMemoriesDto } from "./dto/synthesize-memories.dto";
 import { CustomLoggerService } from "../common/logger/logger.service";
+import { IChatService, IUserService } from "../common/interfaces";
+import { PrismaService } from "../database/prisma.service";
 
 @Injectable()
 export class MemoriesService {
   constructor(
+    @Inject('IChatService')
+    private readonly chatService: IChatService,
+    @Inject('IUserService')
+    private readonly userService: IUserService,
     private readonly prisma: PrismaService,
     private readonly mem0Service: Mem0Service,
     private readonly logger: CustomLoggerService,
@@ -23,18 +28,7 @@ export class MemoriesService {
     try {
       // Get chat and verify it exists
       this.logger.debug(`Fetching chat ${dto.chatID} from database`);
-      const chat = await this.prisma.chat.findUnique({
-        where: { id: dto.chatID },
-        include: {
-          messages: {
-            orderBy: { sequenceNumber: "asc" },
-            select: {
-              content: true,
-              sender: true,
-            },
-          },
-        },
-      });
+      const chat = await this.chatService.findChatWithMessages(dto.chatID);
 
       if (!chat) {
         this.logger.warn(`Chat ${dto.chatID} not found`);
@@ -130,9 +124,7 @@ export class MemoriesService {
     try {
       // Verify user exists
       this.logger.debug(`Verifying user ${userId} exists`);
-      const user = await this.prisma.user.findUnique({
-        where: { id: userId },
-      });
+      const user = await this.userService.findUser(userId);
 
       if (!user) {
         this.logger.warn(`User ${userId} not found`);

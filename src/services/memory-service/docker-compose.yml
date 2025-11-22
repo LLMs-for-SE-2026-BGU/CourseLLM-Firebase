@@ -35,7 +35,7 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/memory_service
       MEM0_API_KEY: ${MEM0_API_KEY:-test_key}
       MEM0_API_URL: ${MEM0_API_URL:-https://api.mem0.ai}
-      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_LEVEL: ${LOG_LEVEL:-debug}
     volumes:
       - ./logs:/app/logs
     depends_on:

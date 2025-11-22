@@ -66,16 +66,88 @@ export class Mem0Service {
                 return [];
             }
 
+            // Get initial memory count
+            const memoriesBeforeAdd = await this.client.getAll({
+                user_id: userId,
+            });
+            const initialCount = Array.isArray(memoriesBeforeAdd) ? memoriesBeforeAdd.length : 0;
+            this.logger.debug(`User ${userId} has ${initialCount} memories before adding new ones`);
+
             // Call mem0.ai SDK to add memories
             const response = await this.client.add(filteredMessages, {
                 user_id: userId,
                 metadata,
             });
 
-            // That's probably should not be logged - aaron
             this.logger.debug(`Raw mem0 response: ${JSON.stringify(response)}`);
 
-            // Transform response to expected format
+            // Check if response indicates async processing
+            const isPending = Array.isArray(response) &&
+                response.some((item: any) => item.status === "PENDING" || item.status === "pending");
+
+            if (isPending) {
+                this.logger.info(
+                    `Memory processing queued for user ${userId}, waiting for completion...`
+                );
+
+                // Poll for new memories (max 60 seconds, check every 3 seconds)
+                const maxAttempts = 20;
+                const pollInterval = 3000; // 3 seconds
+
+                for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+                    this.logger.debug(
+                        `Polling attempt ${attempt}/${maxAttempts} for user ${userId} memories`
+                    );
+
+                    // Wait before polling
+                    await new Promise(resolve => setTimeout(resolve, pollInterval));
+
+                    // Get all memories
+                    const currentMemories = await this.client.getAll({
+                        user_id: userId,
+                    });
+
+                    const currentCount = Array.isArray(currentMemories) ? currentMemories.length : 0;
+
+                    this.logger.debug(
+                        `Memory count: ${currentCount} (initial: ${initialCount}) - ${currentCount > initialCount ? 'NEW MEMORIES DETECTED!' : 'waiting...'}`
+                    );
+
+                    // Check if new memories were created
+                    if (currentCount > initialCount) {
+                        this.logger.info(
+                            `Detected ${currentCount - initialCount} new memories for user ${userId} after ${attempt * pollInterval / 1000}s`
+                        );
+
+                        // Get only the new memories (last N items)
+                        const newMemories = Array.isArray(currentMemories)
+                            ? currentMemories.slice(initialCount)
+                            : [];
+
+                        // Transform to expected format
+                        const memories: Mem0Memory[] = newMemories.map((item: any) => ({
+                            id: item.id || item.memory_id,
+                            memory: item.memory || item.text || item.content,
+                            user_id: userId,
+                            metadata: item.metadata || metadata,
+                        }));
+
+                        this.logger.info(
+                            `Successfully created ${memories.length} memories for user ${userId}`
+                        );
+
+                        return memories;
+                    }
+                }
+
+                // Timeout reached
+                this.logger.warn(
+                    `Timeout waiting for memories to be processed for user ${userId} after ${maxAttempts * pollInterval / 1000}s`
+                );
+                return [];
+            }
+
+            // Synchronous response - transform directly
             const memories: Mem0Memory[] = Array.isArray(response)
                 ? response.map((item: any) => ({
                       id: item.id || item.memory_id,
