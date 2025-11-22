@@ -2,7 +2,7 @@ import { Module } from "@nestjs/common";
 import { MemoriesController } from "./memories.controller";
 import { MemoriesService } from "./memories.service";
 import { Mem0Service } from "./mem0.service";
-import { PrismaChatService, PrismaUserService, PrismaMessageService } from "../common/implementations";
+import { MockChatService, MockUserService, MockMessageService } from "../common/mocks";
 
 @Module({
   controllers: [MemoriesController],
@@ -11,15 +11,15 @@ import { PrismaChatService, PrismaUserService, PrismaMessageService } from "../c
     Mem0Service,
     {
       provide: 'IChatService',
-      useClass: PrismaChatService,
+      useClass: MockChatService,
     },
     {
       provide: 'IUserService',
-      useClass: PrismaUserService,
+      useClass: MockUserService,
     },
     {
       provide: 'IMessageService',
-      useClass: PrismaMessageService,
+      useClass: MockMessageService,
     },
   ],
   exports: [MemoriesService, Mem0Service],

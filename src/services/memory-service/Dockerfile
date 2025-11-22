@@ -13,10 +13,10 @@ COPY package*.json ./
 COPY prisma ./prisma/
 
 # Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci --only=production --legacy-peer-deps && npm cache clean --force
 
 # Generate Prisma Client
-RUN npx prisma generate
+RUN npx prisma@6 generate
 
 # Stage 2: Builder
 FROM node:22-alpine AS builder
@@ -31,14 +31,14 @@ COPY tsconfig*.json ./
 COPY nest-cli.json ./
 
 # Install all dependencies (including dev dependencies for build)
-RUN npm ci && npm cache clean --force
+RUN npm ci --legacy-peer-deps && npm cache clean --force
 
 # Copy source code
 COPY src ./src
 COPY prisma ./prisma
 
 # Generate Prisma Client
-RUN npx prisma generate
+RUN npx prisma@6 generate
 
 # Build application
 RUN npm run build
@@ -83,4 +83,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
 ENTRYPOINT ["dumb-init", "--", "/usr/local/bin/docker-entrypoint.sh"]
 
 # Start application
-CMD ["node", "dist/main"]
+CMD ["node", "dist/src/main"]
