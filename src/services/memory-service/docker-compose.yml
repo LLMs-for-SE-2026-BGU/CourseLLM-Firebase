@@ -1,59 +1,58 @@
+version: '3.8'
+
 services:
   # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
-    container_name: memory_service_postgres
-    restart: unless-stopped
-    ports:
-      - '5432:5432'
+    container_name: memory-service-postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: memory_service
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - memory_service_network
+      - memory-service-network
+    restart: unless-stopped
 
-  # Memory Service Application (Production)
-  app:
+  # Memory Service Application
+  memory-service:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: memory_service_app
-    restart: unless-stopped
-    ports:
-      - '3001:3001'
-    environment:
-      NODE_ENV: production
-      PORT: 3001
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/memory_service
-      MEM0_API_KEY: ${MEM0_API_KEY:-test_key}
-      MEM0_API_URL: ${MEM0_API_URL:-https://api.mem0.ai}
-      LOG_LEVEL: ${LOG_LEVEL:-debug}
-    volumes:
-      - ./logs:/app/logs
+    container_name: memory-service-app
     depends_on:
       postgres:
         condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/memory_service?schema=public
+    ports:
+      - "3001:3001"
+    networks:
+      - memory-service-network
+    restart: unless-stopped
     healthcheck:
-      test: ['CMD-SHELL', 'node -e "require(\"http\").get(\"http://localhost:3001/health\", (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"']
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s
-    networks:
-      - memory_service_network
+      start_period: 40s
+
+networks:
+  memory-service-network:
+    driver: bridge
 
 volumes:
   postgres_data:
     driver: local
-
-networks:
-  memory_service_network:
-    driver: bridge
