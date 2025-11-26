@@ -36,9 +36,6 @@ async function bootstrap() {
     .setTitle("Memory Service API")
     .setDescription("Student Memory Service for CourseWise platform")
     .setVersion("1.0")
-    .addTag("users", "User registration and management")
-    .addTag("messages", "Message persistence")
-    .addTag("conversations", "Conversation retrieval")
     .addTag("memories", "Memory synthesis with mem0.ai")
     .build();
   const document = SwaggerModule.createDocument(app, config);
