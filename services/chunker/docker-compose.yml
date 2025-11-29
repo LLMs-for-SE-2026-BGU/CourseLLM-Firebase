@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  chunker:
+    build: .
+    image: coursewise-chunker:local
+    ports:
+      - '8000:8000'
+    environment:
+      - SERVICE_API_KEY=devkey
+      - CHUNKER_SECRET=devsecret
+      - MAX_CHUNK_SIZE=1000
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/v1/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
