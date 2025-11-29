@@ -38,6 +38,26 @@ Service-to-service security (recommendation):
 Use the interactive docs at `http://localhost:8000/docs` to explore request/response shapes and try secured endpoints (you can pass `Authorization: Bearer <token>` or `X-API-Key: <key>`).
 
 Running & testing (recommended order)
+
+How to run locally:
+NOTE: If runnig from codespace or firebase studio, add the domains to allowed list.
+
+1) run: docker compose -f services/chunker/docker-compose.yml up --build
+This will run the chunker service.
+2) run: npm run dev
+This will run the app
+3) You can now use api calls to the chunker fpr example:
+	3.1) curl -X POST http://localhost:8000/v1/chunk \
+  		-H "Content-Type: application/json" \
+  		-H "X-API-Key: devkey" \
+  		-d '{"markdown":"# Hello\n\nThis is a test."}'
+	Direct access
+
+	3.2) curl -v -X POST http://localhost:9002/api/chunk-proxy \
+  		-H "Content-Type: application/json" \
+  		-d '{"markdown":"# Hello\n\nThis is a test."}'
+	API access
+
 1) Start the chunker service first (so any callers can reach it).
 
 Option A — Local Python virtualenv (recommended for development):
