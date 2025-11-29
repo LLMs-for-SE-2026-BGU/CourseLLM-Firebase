@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,12 +8,20 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Course } from "@/lib/types";
-import { FileText, Presentation, Upload, Trash2 } from 'lucide-react';
+import { FileText, Presentation, Upload, Trash2, Loader2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { uploadMaterial, deleteMaterial } from '../actions';
+import { useParams } from 'next/navigation';
 
 export function CourseManagementClient({ course: initialCourse }: { course: Course }) {
   const [course, setCourse] = useState(initialCourse);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const params = useParams();
+  const courseId = params.courseId as string;
 
   const handleSaveChanges = () => {
     // Here you would typically make an API call to save the changes.
@@ -22,6 +30,103 @@ export function CourseManagementClient({ course: initialCourse }: { course: Cour
       title: "Changes Saved",
       description: `Your changes to "${course.title}" have been saved.`,
     });
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile) {
+      toast({
+        title: "No file selected",
+        description: "Please select a file to upload.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      // Create FormData to send file to server action
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('courseId', courseId);
+      
+      const result = await uploadMaterial(formData);
+      
+      if (result.success && result.material) {
+        // Add the new material to the course
+        setCourse(prev => ({
+          ...prev,
+          materials: [...prev.materials, result.material!],
+        }));
+        
+        // Reset file input
+        setSelectedFile(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+
+        toast({
+          title: "Upload successful",
+          description: `"${result.material.title}" has been added to the course materials.`,
+        });
+      } else {
+        toast({
+          title: "Upload failed",
+          description: result.error || "Failed to upload file. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({
+        title: "Upload failed",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDeleteMaterial = async (materialId: string) => {
+    setIsDeleting(materialId);
+    try {
+      const result = await deleteMaterial(courseId, materialId);
+      
+      if (result.success) {
+        // Remove the material from the course
+        setCourse(prev => ({
+          ...prev,
+          materials: prev.materials.filter(m => m.id !== materialId),
+        }));
+
+        toast({
+          title: "Material deleted",
+          description: "The material has been removed from the course.",
+        });
+      } else {
+        toast({
+          title: "Delete failed",
+          description: result.error || "Failed to delete material. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast({
+        title: "Delete failed",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(null);
+    }
   };
 
   return (
@@ -54,8 +159,18 @@ export function CourseManagementClient({ course: initialCourse }: { course: Cour
                       {material.type === 'PDF' || material.type === 'DOC' ? <FileText className="h-5 w-5 text-primary"/> : <Presentation className="h-5 w-5 text-primary"/>}
                       <span className="flex-1 font-medium">{material.title}</span>
                       <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">{material.type}</span>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
-                        <Trash2 className="h-4 w-4" />
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={() => handleDeleteMaterial(material.id)}
+                        disabled={isDeleting === material.id}
+                      >
+                        {isDeleting === material.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
                       </Button>
                     </div>
                   ))}
@@ -67,9 +182,36 @@ export function CourseManagementClient({ course: initialCourse }: { course: Cour
                  <div className="grid w-full max-w-sm items-center gap-1.5">
                     <Label htmlFor="material-file">File (PDF, PPT, DOC, MD)</Label>
                     <div className="flex gap-2">
-                        <Input id="material-file" type="file" />
-                        <Button variant="secondary"><Upload className="mr-2 h-4 w-4"/> Upload</Button>
+                        <Input 
+                          id="material-file" 
+                          type="file" 
+                          ref={fileInputRef}
+                          onChange={handleFileChange}
+                          accept=".pdf,.ppt,.pptx,.doc,.docx,.md,.txt"
+                        />
+                        <Button 
+                          variant="secondary" 
+                          onClick={handleUpload}
+                          disabled={!selectedFile || isUploading}
+                        >
+                          {isUploading ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Uploading...
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="mr-2 h-4 w-4" />
+                              Upload
+                            </>
+                          )}
+                        </Button>
                     </div>
+                    {selectedFile && (
+                      <p className="text-sm text-muted-foreground">
+                        Selected: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(2)} KB)
+                      </p>
+                    )}
                  </div>
               </div>
             </CardContent>
