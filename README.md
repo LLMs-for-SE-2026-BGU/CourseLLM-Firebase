@@ -4,26 +4,54 @@
 CourseLLM (Coursewise) is an educational platform that leverages AI to provide personalized learning experiences. 
 It is intended for Undergraduate University Courses and is being tested on Computer Science courses.
 
-The project provides role-based dashboards for students and teachers, integrated authentication via Firebase, and AI-powered course assessment and tutoring. 
+To get started, take a look at src/app/page.tsx.
 
-The core goals are to:
-- Enable personalized learning assessment and recommendations for students
-- Provide Socratic-style course tutoring through AI chat
-- Keep track of the history of students interactions with the system to enable teachers to monitor quality, intervene when needed, and obtain fine-grained analytics on learning trajectories.
-- Support both student and teacher workflows
-- Ensure secure, role-based access control
+## 🧠 AI Features
 
-## Tech Stack
-- **Frontend Framework**: Next.js 15 with React 18 (TypeScript)
-- **Styling**: Tailwind CSS with Radix UI components
-- **Backend/Functions**: Firebase Cloud Functions, Firebase Admin SDK
-- **Backend**: FastAPI Python micro-services hosted on Google Cloud Run.
-- **Database**: Firestore (NoSQL document database)
-- **Authentication**: Firebase Authentication (Google OAuth)
-- **AI/ML**: Google Genkit 1.20.0 with Google GenAI models (default: gemini-2.5-flash) and DSPy.ai for complex 
-- **Data**: Firebase DataConnect (GraphQL layer over Firestore)
-- **Testing**: Playwright for E2E tests
-- **Dev Tools**: TypeScript 5, pnpm workspace, Node.js
-- **Deployment**: Firebase Hosting, App Hosting
+### Context-Aware RAG Pipeline
 
-More technical details are available in openspecs/specs/project.md
+We have implemented an optimized Retrieval-Augmented Generation (RAG) pipeline designed for course materials (textbooks, lectures).
+
+**The Problem:** Standard chunking loses context. A chunk saying "It uses a boolean flag" is useless without knowing it belongs to "Chapter 2 > While Loops".
+
+**Our Solution:**
+1.  **Hierarchical Chunking:** We parse Markdown headers to track the full path of every text chunk (e.g., `["Unit 1", "React", "Hooks"]`).
+2.  **AI Enrichment:** We use Gemini to generate metadata for each chunk:
+    *   **Summary:** One-sentence overview.
+    *   **Keywords:** For tag-based filtering.
+    *   **Hypothetical Questions:** Enables "Question-to-Question" semantic search.
+3.  **Smart Embedding:** We embed a rich context string (Title + Path + Summary + Content) rather than just raw text.
+
+### 🧪 Testing the Pipeline
+
+**1. Configure Environment Variables**
+Create a `.env.local` file in the root directory (`CourseLLM-Firebase`) and add your Google Gemini API key. This is required for the AI enrichment features.
+
+```env
+GOOGLE_API_KEY=YOUR_API_KEY_HERE
+```
+
+**2. Run the Chunking Logic Tests**
+Verify that the deterministic chunker correctly handles headers, nesting, and code blocks.
+```bash
+npx tsx scripts/test-chunking.ts
+```
+
+**3. Test the Full AI Pipeline (Genkit UI)**
+1.  Start the Genkit server:
+    ```bash
+    npm run genkit:dev
+    ```
+2.  Open `http://localhost:4000`.
+3.  Click on the **Flows** menu item.
+4.  Select `optimizedIndexingFlow`.
+5.  Input sample Markdown to see the generated chunks, metadata, and vector embeddings.
+
+    **Example Input JSON:**
+    ```json
+    {
+      "courseId": "cs-101",
+      "documentTitle": "Introduction to AI",
+      "markdownContent": "# What is AI?\n\nArtificial Intelligence (AI) is the simulation of human intelligence processes by machines.\n\n## Key Concepts\n\n### Machine Learning\nMachine Learning (ML) is a subset of AI that provides systems the ability to automatically learn and improve from experience."
+    }
+    ```
