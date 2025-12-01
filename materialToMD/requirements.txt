@@ -1,0 +1,9 @@
+pymupdf
+python-docx
+python-pptx
+Pillow
+pytest
+fastapi
+uvicorn
+httpx
+python-multipart
