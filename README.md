@@ -1,6 +1,8 @@
-# Firebase Studio
+# CourseLLM
 
-This is a NextJS starter in Firebase Studio.
+## Purpose
+CourseLLM (Coursewise) is an educational platform that leverages AI to provide personalized learning experiences. 
+It is intended for Undergraduate University Courses and is being tested on Computer Science courses.
 
 To get started, take a look at src/app/page.tsx.
 
