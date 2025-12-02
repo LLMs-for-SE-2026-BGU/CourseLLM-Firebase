@@ -27,7 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { FirebaseQuizService } from '@/lib/firebase-quiz-service';
+import { QuizApiClient } from '@/lib/quiz-api-client';
 import { courses, quizAttempts } from '@/lib/mock-data';
 import { Quiz } from '@/lib/types';
 import { Plus, BarChart, Users, Trophy, BookOpen, Loader2, Trash2 } from 'lucide-react';
@@ -52,7 +52,7 @@ export default function TeacherQuizzesPage() {
   const fetchQuizzes = async () => {
     try {
       setIsLoading(true);
-      const quizzes = await FirebaseQuizService.getAll();
+      const quizzes = await QuizApiClient.getAll();
       setAllQuizzes(quizzes);
     } catch (error) {
       console.error('Error fetching quizzes:', error);
@@ -76,7 +76,7 @@ export default function TeacherQuizzesPage() {
 
     try {
       setIsDeleting(true);
-      await FirebaseQuizService.delete(quizToDelete.id);
+      await QuizApiClient.delete(quizToDelete.id);
       
       toast({
         title: 'Quiz Deleted',

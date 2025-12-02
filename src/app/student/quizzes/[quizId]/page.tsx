@@ -26,8 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { FirebaseQuizService } from '@/lib/firebase-quiz-service';
-import { FirebaseAttemptService } from '@/lib/firebase-attempt-service';
+import { QuizApiClient } from '@/lib/quiz-api-client';
 import { quizAttempts, courses } from '@/lib/mock-data';
 import { Quiz, QuizQuestion, QuizAnswer, QuizAttempt } from '@/lib/types';
 import { ChevronLeft, ChevronRight, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
@@ -52,7 +51,7 @@ export default function TakeQuizPage() {
     const fetchQuiz = async () => {
       try {
         setIsLoading(true);
-        const foundQuiz = await FirebaseQuizService.getById(quizId);
+        const foundQuiz = await QuizApiClient.getById(quizId);
         if (foundQuiz) {
           setQuiz(foundQuiz);
           
@@ -191,7 +190,7 @@ export default function TakeQuizPage() {
       };
 
       // Save to Firebase
-      const savedAttempt = await FirebaseAttemptService.create(attemptData);
+      const savedAttempt = await QuizApiClient.createAttempt(attemptData);
 
       toast({
         title: 'Quiz Submitted!',

@@ -19,7 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { courses } from '@/lib/mock-data';
-import { FirebaseQuizService } from '@/lib/firebase-quiz-service';
+import { QuizApiClient } from '@/lib/quiz-api-client';
 import { Quiz, QuizQuestion } from '@/lib/types';
 import { Sparkles, Loader2, CheckCircle, AlertCircle, ArrowLeft, Save } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
@@ -162,8 +162,8 @@ export default function GenerateQuizPage() {
         topics: uniqueTopics,
       };
 
-      // Save quiz to Firebase
-      const savedQuiz = await FirebaseQuizService.add(quizData);
+      // Save quiz to API
+      const savedQuiz = await QuizApiClient.add(quizData);
 
       toast({
         title: 'Quiz Saved!',

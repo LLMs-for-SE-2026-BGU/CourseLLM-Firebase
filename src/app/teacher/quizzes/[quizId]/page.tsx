@@ -17,7 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { FirebaseQuizService } from '@/lib/firebase-quiz-service';
+import { QuizApiClient } from '@/lib/quiz-api-client';
 import { quizAttempts, courses, students } from '@/lib/mock-data';
 import { Quiz, QuizAttempt } from '@/lib/types';
 import { ArrowLeft, Users, Trophy, BarChart, Target, CheckCircle, XCircle, Loader2 } from 'lucide-react';
@@ -35,7 +35,7 @@ export default function TeacherQuizDetailPage() {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        const foundQuiz = await FirebaseQuizService.getById(quizId);
+        const foundQuiz = await QuizApiClient.getById(quizId);
         setQuiz(foundQuiz || null);
 
         const quizAttemptsList = quizAttempts.filter(

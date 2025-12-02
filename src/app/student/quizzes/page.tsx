@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
-import { FirebaseQuizService } from '@/lib/firebase-quiz-service';
+import { QuizApiClient } from '@/lib/quiz-api-client';
 import { courses, quizAttempts } from '@/lib/mock-data';
 import { Quiz, QuizAttempt } from '@/lib/types';
 import { BookOpen, Clock, Target, Trophy, Loader2 } from 'lucide-react';
@@ -34,7 +34,7 @@ export default function StudentQuizzesPage() {
     const fetchQuizzes = async () => {
       try {
         setIsLoading(true);
-        const allQuizzes = await FirebaseQuizService.getAll();
+        const allQuizzes = await QuizApiClient.getAll();
         setQuizzes(allQuizzes);
       } catch (error) {
         console.error('Error fetching quizzes:', error);

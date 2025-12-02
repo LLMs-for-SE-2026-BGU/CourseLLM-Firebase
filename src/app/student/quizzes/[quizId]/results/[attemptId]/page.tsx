@@ -16,8 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { FirebaseQuizService } from '@/lib/firebase-quiz-service';
-import { FirebaseAttemptService } from '@/lib/firebase-attempt-service';
+import { QuizApiClient } from '@/lib/quiz-api-client';
 import { courses } from '@/lib/mock-data';
 import { Quiz, QuizAttempt, QuizQuestion } from '@/lib/types';
 import { CheckCircle, XCircle, Trophy, Target, Clock, RotateCcw, Home, Loader2 } from 'lucide-react';
@@ -37,10 +36,10 @@ export default function QuizResultsPage() {
       try {
         setIsLoading(true);
         
-        // Fetch quiz and attempt from Firebase
+        // Fetch quiz and attempt from API
         const [foundQuiz, foundAttempt] = await Promise.all([
-          FirebaseQuizService.getById(quizId),
-          FirebaseAttemptService.getById(attemptId)
+          QuizApiClient.getById(quizId),
+          QuizApiClient.getAttemptById(attemptId)
         ]);
         
         setQuiz(foundQuiz || null);
