@@ -46,3 +46,7 @@ firestore-debug.log
 .firebase/
 # Environment variables with secrets
 .env.local
+/.idea/.gitignore
+/.idea/modules.xml
+/.idea/quiz.iml
+/.idea/vcs.xml
