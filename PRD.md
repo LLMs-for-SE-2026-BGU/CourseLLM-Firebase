@@ -54,7 +54,7 @@ How to run the app locally: Firebase emulators + Python backend + Next.js fronte
   # Windows
   .venv\Scripts\activate
   # macOS / Linux
-  # source .venv/bin/activate
+   source .venv/bin/activate
 
   pip install -r requirements.txt
   npm install
@@ -90,9 +90,9 @@ In **Terminal 2**, with the virtualenv activated:
 
 ```bash
 # Windows:
-#   .venv\Scripts\activate
+   .venv\Scripts\activate
 # macOS / Linux:
-#   source .venv/bin/activate
+   source .venv/bin/activate
 
 uvicorn src.ai.dspy.api:app --reload --port 8001
 ```
