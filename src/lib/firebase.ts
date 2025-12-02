@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
-import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
+import { getAuth, GoogleAuthProvider, connectAuthEmulator } from "firebase/auth";
+import { getFirestore, enableIndexedDbPersistence, connectFirestoreEmulator } from "firebase/firestore";
+import { getStorage, connectStorageEmulator } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -15,17 +16,30 @@ const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const storage = getStorage(app); // Added Storage support
 
-// Enable offline persistence so reads can be served from cache when offline.
-// This is a best-effort call: it will fail in some environments (e.g. Safari private mode)
-// and when multiple tabs conflict. We catch and ignore expected errors.
+// --- CONNECT TO EMULATORS (Local Dev Only) ---
+// This block redirects the frontend SDKs to your local running emulators
+if (process.env.NODE_ENV === 'development') {
+  console.log("🔧 Frontend: Connecting to Firebase Emulators...");
+  
+  // Connect Auth (Port 9099)
+  // Note: We explicitly disable the warning about running on http
+  connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+  
+  // Connect Firestore (Port 8080)
+  connectFirestoreEmulator(db, "127.0.0.1", 8080);
+  
+  // Connect Storage (Port 9199)
+  connectStorageEmulator(storage, "127.0.0.1", 9199);
+}
+
+// Enable offline persistence
 try {
   enableIndexedDbPersistence(db).catch((err) => {
-    // failed-precondition: multiple tabs open, unimplemented: browser not supported
     console.warn("Could not enable IndexedDB persistence:", err.code || err.message || err);
   });
 } catch (e) {
-  // Ignore synchronous errors
   console.warn("Persistence enable failed:", e);
 }
 

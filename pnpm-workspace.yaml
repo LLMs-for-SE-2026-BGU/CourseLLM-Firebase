@@ -1,3 +1,0 @@
-overrides:
-  '@dataconnect/generated': link:src/dataconnect-generated
-  '@dataconnect/admin-generated': link:src/dataconnect-admin-generated

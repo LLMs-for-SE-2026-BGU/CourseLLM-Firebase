@@ -1,17 +1,10 @@
 {
   "emulators": {
-    "dataconnect": {
-      "dataDir": "dataconnect/.dataconnect/pgliteData",
-      "port": 9399
-    },
     "auth": {
       "port": 9099
     },
     "firestore": {
       "port": 8080
-    },
-    "database": {
-      "port": 9000
     },
     "storage": {
       "port": 9199
@@ -21,30 +14,7 @@
     },
     "singleProjectMode": true
   },
-  "dataconnect": {
-    "source": "dataconnect"
-  },
-  "firestore": {
-    "database": "(default)",
-    "location": "us-central1",
-    "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
-  },
-  "functions": [
-    {
-      "source": "functions",
-      "codebase": "default",
-      "disallowLegacyRuntimeConfig": true,
-      "predeploy": [
-        "npm --prefix \"$RESOURCE_DIR\" run lint",
-        "npm --prefix \"$RESOURCE_DIR\" run build"
-      ]
-    }
-  ],
   "storage": {
     "rules": "storage.rules"
-  },
-  "database": {
-    "rules": "database.rules.json"
   }
 }
