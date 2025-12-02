@@ -1,7 +1,8 @@
-// Firebase configuration
+// Firebase configuration - combined auth and quiz features
 import { initializeApp, getApps } from 'firebase/app';
+import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
 import { getAnalytics } from 'firebase/analytics';
-import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -16,11 +17,28 @@ const firebaseConfig = {
 // Initialize Firebase (avoid reinitializing if already initialized)
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
+// Initialize Auth
+export const auth = getAuth(app);
+export const googleProvider = new GoogleAuthProvider();
+
 // Initialize Firestore
-const db = getFirestore(app);
+export const db = getFirestore(app);
+
+// Enable offline persistence so reads can be served from cache when offline.
+// This is a best-effort call: it will fail in some environments (e.g. Safari private mode)
+// and when multiple tabs conflict. We catch and ignore expected errors.
+try {
+  enableIndexedDbPersistence(db).catch((err) => {
+    // failed-precondition: multiple tabs open, unimplemented: browser not supported
+    console.warn("Could not enable IndexedDB persistence:", err.code || err.message || err);
+  });
+} catch (e) {
+  // Ignore synchronous errors
+  console.warn("Persistence enable failed:", e);
+}
 
 // Initialize Analytics (only in browser)
 const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
 
-export { app, db, analytics };
-
+export { app, analytics };
+export default app;

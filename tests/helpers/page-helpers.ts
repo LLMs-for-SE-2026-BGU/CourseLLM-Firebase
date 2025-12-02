@@ -147,4 +147,37 @@ export class PageHelpers {
     // Wait for navigation to quiz page
     await this.page.waitForURL(/.*\/student\/quizzes\/.+/);
   }
+
+  /**
+   * Select difficulty filter
+   */
+  async selectDifficultyFilter(difficulty: string) {
+    // Find the difficulty filter trigger (usually has "Difficulty" or "All Difficulties" text)
+    const trigger = this.page.locator('button:has-text("Difficulty"), button:has-text("All Difficulties")').first();
+    await trigger.click();
+    await this.page.waitForSelector('[role="option"]', { timeout: 5000 });
+    await this.page.getByRole('option', { name: difficulty }).click();
+  }
+
+  /**
+   * Select status filter
+   */
+  async selectStatusFilter(status: string) {
+    // Find the status filter trigger (usually has "Status" or "All Statuses" text)
+    const trigger = this.page.locator('button:has-text("Status"), button:has-text("All Statuses")').first();
+    await trigger.click();
+    await this.page.waitForSelector('[role="option"]', { timeout: 5000 });
+    await this.page.getByRole('option', { name: status }).click();
+  }
+
+  /**
+   * Select course filter
+   */
+  async selectCourseFilter(course: string) {
+    // Find the course filter trigger
+    const trigger = this.page.locator('button:has-text("Course"), button:has-text("All Courses")').first();
+    await trigger.click();
+    await this.page.waitForSelector('[role="option"]', { timeout: 5000 });
+    await this.page.getByRole('option', { name: course }).click();
+  }
 }

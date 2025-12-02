@@ -1,11 +1,13 @@
 import { test, expect } from '@playwright/test';
 import { PageHelpers } from '../helpers/page-helpers';
+import { loginAsStudent } from '../helpers/auth-helpers';
 
 test.describe('Student Quiz Taking', () => {
   let helpers: PageHelpers;
 
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, request }) => {
     helpers = new PageHelpers(page);
+    await loginAsStudent(page, request);
   });
 
   test('should take quiz and submit', async ({ page }) => {

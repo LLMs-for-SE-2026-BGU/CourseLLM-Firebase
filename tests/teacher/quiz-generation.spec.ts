@@ -1,12 +1,14 @@
 import { test, expect } from '@playwright/test';
 import { PageHelpers } from '../helpers/page-helpers';
 import { QUIZ_FIXTURES } from '../fixtures/quiz-fixtures';
+import { loginAsTeacher } from '../helpers/auth-helpers';
 
 test.describe('Teacher Quiz Generation', () => {
   let helpers: PageHelpers;
 
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, request }) => {
     helpers = new PageHelpers(page);
+    await loginAsTeacher(page, request);
   });
 
   test('should load quiz generation page', async ({ page }) => {
