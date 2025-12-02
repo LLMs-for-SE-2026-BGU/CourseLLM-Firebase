@@ -15,8 +15,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { initialFiles as defaultInitialFiles, type FileData } from "@/lib/files";
 import { FileCard } from "./file-card";
+import { useAuth } from "@/components/AuthProviderClient";
+import { useRouter } from "next/navigation";
 
 export function FileBrowser({ initialFiles = defaultInitialFiles }: { initialFiles?: FileData[] }) {
+  const { profile, loading } = useAuth();
+  const router = useRouter();
   const [files, setFiles] = useState<FileData[]>(initialFiles);
   const [fileToDelete, setFileToDelete] = useState<FileData | null>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
@@ -28,6 +32,24 @@ export function FileBrowser({ initialFiles = defaultInitialFiles }: { initialFil
       Object.values(objectUrls).forEach(URL.revokeObjectURL);
     };
   }, [objectUrls]);
+
+  if (loading) {
+    return (
+        <div className="flex justify-center items-center h-screen">
+            <div className="text-2xl">Loading...</div>
+        </div>
+    );
+  }
+
+  if (!profile) {
+    router.push("/login");
+    return null;
+  }
+
+  if (profile.role !== "teacher") {
+    router.push("/student");
+    return null;
+  }
 
   const handleUploadClick = () => {
     uploadInputRef.current?.click();
