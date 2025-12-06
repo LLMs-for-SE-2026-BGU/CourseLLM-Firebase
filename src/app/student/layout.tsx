@@ -5,6 +5,9 @@ import {
   BookOpen,
   User,
 } from 'lucide-react';
+import ClientOnly from '@/components/ClientOnly';
+import RoleGuardClient from '@/components/RoleGuardClient';
+import InnerAppShellClient from '@/components/InnerAppShellClient';
 
 const studentNavItems = [
   { href: '/student', label: 'Dashboard', icon: <LayoutDashboard /> },
@@ -24,9 +27,14 @@ export default function StudentLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // RoleGuardClient is client; InnerAppShellClient renders AppShell using profile
   return (
-    <AppShell navItems={studentNavItems} user={user}>
-      {children}
-    </AppShell>
+    <ClientOnly>
+      <RoleGuardClient requiredRole="student">
+        <InnerAppShellClient role="student">
+          {children}
+        </InnerAppShellClient>
+      </RoleGuardClient>
+    </ClientOnly>
   );
 }
