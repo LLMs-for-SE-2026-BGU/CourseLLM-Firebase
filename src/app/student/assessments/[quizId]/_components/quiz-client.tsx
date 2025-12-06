@@ -7,21 +7,31 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Loader2, CheckCircle, XCircle, ArrowRight, Award, RotateCw } from 'lucide-react';
-import { generateQuizFlow, QuizGenerationOutput } from '@/ai/flows/quiz-generation';
-import { gradeQuizFlow, QuizGradingOutput } from '@/ai/flows/quiz-grading';
+import { QuizGradingOutput } from '@/ai/flows/quiz-grading';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/components/AuthProviderClient';
+import { submitQuiz, generateQuiz, getQuiz } from '@/services/quiz-service';
+
+type Question = {
+  text: string;
+  options: string[];
+  correctAnswerIndex: number;
+  learningObjectiveIndex: number;
+  explanation: string;
+};
 
 type QuizClientProps = {
   quizId: string;
+  courseId: string;
   courseTitle: string;
-  learningObjectives: string[];
-  loIds: string[];
 };
 
-export function QuizClient({ quizId, courseTitle, learningObjectives, loIds }: QuizClientProps) {
-  const [questions, setQuestions] = useState<QuizGenerationOutput['questions']>([]);
+export function QuizClient({ quizId, courseId, courseTitle }: QuizClientProps) {
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [currentQuizId, setCurrentQuizId] = useState<string>(quizId);
+  const [activeCourseId, setActiveCourseId] = useState<string>(courseId);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({}); 
   const [status, setStatus] = useState<'loading' | 'ready' | 'submitting' | 'results'>('loading');
@@ -30,22 +40,54 @@ export function QuizClient({ quizId, courseTitle, learningObjectives, loIds }: Q
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const { toast } = useToast();
+  const { firebaseUser } = useAuth();
 
+  /**
+   * Loads or generates a quiz via the QuizService.
+   * This follows the microservices pattern - all data flows through the service layer.
+   */
   const loadQuiz = async (isRetry = false) => {
     setStatus('loading');
     setAnswers({});
     setCurrentQuestionIndex(0);
     setResults(null);
     
-    try {
-      const result = await generateQuizFlow({
-        courseTitle,
-        learningObjectives,
-        difficulty: 'medium',
-        count: 3, 
+    if (!firebaseUser) {
+      toast({
+        variant: "destructive",
+        title: "Authentication Required",
+        description: "Please log in to take a quiz.",
       });
-      setQuestions(result.questions);
+      return;
+    }
+
+    try {
+      let quizData: any = null;
+      
+      // Try to fetch existing quiz first
+      if (!isRetry && currentQuizId) {
+        quizData = await getQuiz(currentQuizId);
+      }
+      
+      // If no quiz exists or retry requested, generate a new one
+      if (!quizData || isRetry) {
+        const targetCourseId = activeCourseId || courseId;
+        if (!targetCourseId) {
+            throw new Error("Cannot generate quiz: Course ID missing");
+        }
+        const newQuizId = await generateQuiz(firebaseUser.uid, targetCourseId);
+        setCurrentQuizId(newQuizId);
+        quizData = await getQuiz(newQuizId);
+      }
+      
+      if (!quizData || !quizData.questions) {
+        throw new Error("Failed to load quiz data");
+      }
+      
+      setQuestions(quizData.questions);
+      if (quizData.courseId) setActiveCourseId(quizData.courseId);
       setStatus('ready');
+      
       if (isRetry) {
         toast({
           title: "New Quiz Generated",
@@ -64,7 +106,7 @@ export function QuizClient({ quizId, courseTitle, learningObjectives, loIds }: Q
 
   useEffect(() => {
     loadQuiz();
-  }, []); // Load on mount only
+  }, [firebaseUser]); // Re-load when user auth state changes
 
   const handleOptionSelect = (optionIndex: number) => {
     setAnswers(prev => ({ ...prev, [currentQuestionIndex]: optionIndex }));
@@ -78,35 +120,32 @@ export function QuizClient({ quizId, courseTitle, learningObjectives, loIds }: Q
     }
   };
 
+  /**
+   * Submits the quiz for grading via the QuizService.
+   * The service handles: AI grading, result persistence, and learning trajectory updates.
+   */
   const handleSubmit = () => {
+    if (!firebaseUser) {
+      toast({
+        variant: "destructive",
+        title: "Authentication Required",
+        description: "Please log in to submit your quiz.",
+      });
+      return;
+    }
+
     setStatus('submitting');
     startTransition(async () => {
       try {
-        const gradingInput = {
-          quizId,
-          questions: questions.map((q, index) => ({
-            questionId: `q-${index}`,
-            text: q.text,
-            correctAnswerIndex: q.correctAnswerIndex,
-            studentAnswerIndex: answers[index] ?? -1,
-            learningObjectiveId: loIds[q.learningObjectiveIndex] || loIds[0],
-          }))
-        };
-
-        const result = await gradeQuizFlow(gradingInput);
+        // Call QuizService - this is the microservices entry point
+        const result = await submitQuiz(firebaseUser.uid, currentQuizId, answers);
         setResults(result);
         setStatus('results');
         
-        // Store results in localStorage to simulate persistence for the profile page
-        const storedResults = JSON.parse(localStorage.getItem('quizResults') || '{}');
-        storedResults[quizId] = {
-            score: result.score,
-            totalQuestions: result.totalQuestions,
-            dateTaken: new Date().toISOString().split('T')[0],
-            status: 'completed',
-            loUpdates: result.loUpdates
-        };
-        localStorage.setItem('quizResults', JSON.stringify(storedResults));
+        toast({
+          title: "Quiz Submitted!",
+          description: "Your results have been saved to your profile.",
+        });
         
       } catch (error) {
         console.error("Grading failed:", error);
